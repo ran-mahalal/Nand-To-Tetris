@@ -1,0 +1,11 @@
+//King of Falafel game
+class Main {
+    //Creates and runs the game
+    function void main() {
+        var Game game;
+        let game = Game.new();
+        do game.run();
+        do game.dispose();
+        return;
+    }
+}

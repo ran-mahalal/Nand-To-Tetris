@@ -1,0 +1,415 @@
+class Game {
+    field Player bottomPlayer;  
+    field Customer customer;    
+    field Table table;        
+    field int score;          
+    field int timeLeft;       
+    field int level;          
+    field boolean exit;       
+    field int currentOrder;   
+    field int baseTime;      
+    field int difficultyLevel;
+    //fireworks - if the player won
+    field int firework1X, firework1Y, firework1Size;
+    field int firework2X, firework2Y, firework2Size;
+    field int firework3X, firework3Y, firework3Size;
+    field boolean expanding1, expanding2, expanding3;
+    field int animationCounter;
+    //the screen flashes if time is running out
+    field int warningBlinkCounter;
+
+    
+    constructor Game new() {
+        let bottomPlayer = Player.new(255, 220);
+        let customer = Customer.new(128, 30);   
+        let table = Table.new();
+        let score = 0;
+        let baseTime = 300;
+        let timeLeft = baseTime;
+        let level = 1;
+        let exit = false;
+        let currentOrder = 0;
+        let warningBlinkCounter = 0;
+        return this;
+    }
+
+     method void dispose() {
+        do bottomPlayer.dispose();
+        do customer.dispose();
+        do table.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method void run() {
+        var char key;
+        var char lastKey;
+        var boolean orderComplete;
+        do selectLevel();
+        do drawInitialScreen();
+        do generateNewOrder();
+        
+        while(~exit) {
+            let key = Keyboard.keyPressed();
+            
+            // warning when time is about to run out
+            if (timeLeft < 100) {
+                let warningBlinkCounter = warningBlinkCounter + 1;
+                //blinking pace
+                if ((warningBlinkCounter & 40) = 0) {
+                    do blinkWarningFrame();
+                }
+            }
+            //loss in the game
+            if(timeLeft < 1) {
+                do gameOver(score, "Time's up!");
+                let exit = true;
+            }
+
+            //moves the player right or left 
+            if((key = 130) & (~(key = lastKey))) { do bottomPlayer.moveLeft(); }
+            if((key = 132) & (~(key = lastKey))) { do bottomPlayer.moveRight(); }
+            
+            //the space was pressed - the answer need to be checked
+            if((lastKey = 32) & (key = 0)) {
+                let orderComplete = checkOrder();
+                if(orderComplete) {
+                    //this means the order was taken correctly
+                    let score = score + 100;
+                    //winning the game
+                    if (score > 1500) {
+                        do victory(score);
+                        let exit = true;
+                    } else {    
+                        do drawHeader(); 
+                        // new customer
+                        do customer.dispose();
+                        let customer = Customer.new(128, 30);
+                        do customer.draw();
+                        do generateNewOrder();
+                        //gives more time in the game
+                        let timeLeft = Math.max(30, baseTime - ((level-1) * ((difficultyLevel-1)*10)));//for easy no time reduce
+                    }
+                } else {
+                    //mistake in the order
+                    do gameOver(score, "Wrong order!");
+                    let exit = true;
+                }
+            }
+            
+            let lastKey = key;
+            //keep positive time
+            let timeLeft = Math.max(0, timeLeft - 1);
+            do Sys.wait(50);
+            do updateDisplay();
+        }
+        return;
+    }
+
+
+    method boolean checkOrder() {
+        return (bottomPlayer.getPosition() = currentOrder);
+    }
+
+    method void generateNewOrder() {
+        do customer.cleanup();
+        let currentOrder = Random.between(0,3);
+        let level = level + 1;
+        
+        if (difficultyLevel = 1) {
+            let timeLeft = Math.max(30, baseTime);
+        }
+        if (difficultyLevel = 2) {
+            let timeLeft = Math.max(25, baseTime);
+        }
+        if (difficultyLevel = 3) {
+            let timeLeft = Math.max(20, baseTime);
+        }
+        do customer.setOrder(currentOrder);
+        return;
+    }
+
+     method void blinkWarningFrame() {
+        var boolean color;
+        var int i;
+        
+        //alternate between white and black
+        if ((warningBlinkCounter & 1) = 0) {
+            let color = true;  
+        } else {
+            let color = false;  
+        } 
+        do Screen.setColor(color);    
+        
+        //horizontal lines
+        let i = 0;
+        while (i < 10) {
+            do Screen.drawLine(10, i, 501, i);
+            do Screen.drawLine(10, 255 - i, 501, 255 - i);
+            let i = i + 1;
+        }
+        
+        //vertical lines
+        let i = 0;
+        while (i < 10) {
+            do Screen.drawLine(10 + i, 10, 10 + i, 245);
+            do Screen.drawLine(501 - i, 10, 501 - i, 245);
+            let i = i + 1;
+        }
+        
+        return;
+    }
+
+    //selet level screen
+    method void selectLevel() {
+        var int selectedLevel;
+        do Screen.clearScreen();
+        do Output.moveCursor(1, 16);
+        do Output.printString("King of falafel!");
+        do Output.moveCursor(3, 16);
+        do Output.printString("You will have to serve the customers!");
+        do Output.moveCursor(5, 16);
+        do Output.printString("score 1,600 point for victory");
+        do Output.moveCursor(7, 16);
+        do Output.printString("in each order you serve you have");
+        do Output.moveCursor(9, 16);
+        do Output.printString("less time for the next one");
+        do Output.moveCursor(11, 20);
+        do Output.printString("Choose Difficulty Level:");
+        do Output.moveCursor(13, 20);
+        do Output.printString("1. Easy");
+        do Output.moveCursor(14, 20);
+        do Output.printString("2. Medium");
+        do Output.moveCursor(15, 20);
+        do Output.printString("3. Hard");
+        do Output.moveCursor(17, 20);
+        do Output.printString("Enter your choice (1-3): ");
+        //the player chooses from 1 to 3
+        let selectedLevel = Keyboard.readInt(0);
+        if (selectedLevel = 1) { let difficultyLevel = 1; }
+        if (selectedLevel = 2) { let difficultyLevel = 2; }
+        if (selectedLevel = 3) { let difficultyLevel = 3; }
+        return;
+    }
+
+    
+    method void drawInitialScreen() {
+        do Screen.clearScreen();
+        do drawHeader();
+        do table.draw();
+        do bottomPlayer.draw();
+        do customer.draw();
+        return;
+    }
+
+    method void drawHeader() {
+        do Output.moveCursor(0,0);
+        do Output.printString("Score: ");
+        do Output.printInt(score);
+        do Output.moveCursor(0,40);
+        do Output.printString("Level: ");
+        do Output.printInt(level);
+        return;
+    }
+
+    //updates the time displayed on thw screen
+    method void updateDisplay() {
+        do Output.moveCursor(0,20);
+        do Output.printString("Time: ");
+        do Output.printInt(timeLeft);
+        return;
+    }
+
+    method void gameOver(int finalScore, String message) {
+        do Screen.clearScreen();
+        do Output.moveCursor(10, 27);
+        do Output.printString(message);
+        do Output.moveCursor(12, 27);
+        do Output.printString("Game Over!");
+        do Output.moveCursor(14, 27);
+        do Output.printString("Final Score: ");
+        do Output.printInt(finalScore);
+        do drawSkull(302); 
+        do Sys.wait(6000);      
+        return;
+    }
+
+    //Draws a skull
+    method void drawSkull(int location) {
+        var int memAddress; 
+        let memAddress = 16384+location;
+        // column 0
+        do Memory.poke(memAddress, -128);
+        do Memory.poke(memAddress +32, -128);
+        do Memory.poke(memAddress +64, 64);
+        do Memory.poke(memAddress +96, -30649);
+        do Memory.poke(memAddress +128, 20607);
+        do Memory.poke(memAddress +160, 8319);
+        do Memory.poke(memAddress +192, 20551);
+        do Memory.poke(memAddress +224, -30656);
+        do Memory.poke(memAddress +256, 64);
+        do Memory.poke(memAddress +288, 384);
+        do Memory.poke(memAddress +320, 768);
+        do Memory.poke(memAddress +352, 1536);
+        do Memory.poke(memAddress +384, 3072);
+        do Memory.poke(memAddress +416, 6144);
+        do Memory.poke(memAddress +448, 12288);
+        do Memory.poke(memAddress +480, 8192);
+        do Memory.poke(memAddress +512, 8192);
+        do Memory.poke(memAddress +544, 8192);
+        do Memory.poke(memAddress +576, 8192);
+        do Memory.poke(memAddress +608, 8192);
+        do Memory.poke(memAddress +640, -8192);
+        // column 1
+        do Memory.poke(memAddress +1, 16383);
+        do Memory.poke(memAddress +33, 16383);
+        do Memory.poke(memAddress +65, 16384);
+        do Memory.poke(memAddress +97, 16928);
+        do Memory.poke(memAddress +129, -16064);
+        do Memory.poke(memAddress +161, -16256);
+        do Memory.poke(memAddress +193, 16704);
+        do Memory.poke(memAddress +225, 16928);
+        do Memory.poke(memAddress +257, 16384);
+        do Memory.poke(memAddress +289, 12288);
+        do Memory.poke(memAddress +321, 6144);
+        do Memory.poke(memAddress +353, 3072);
+        do Memory.poke(memAddress +385, 1536);
+        do Memory.poke(memAddress +417, 768);
+        do Memory.poke(memAddress +449, 256);
+        do Memory.poke(memAddress +481, 256);
+        do Memory.poke(memAddress +513, 286);
+        do Memory.poke(memAddress +545, 256);
+        do Memory.poke(memAddress +577, 286);
+        do Memory.poke(memAddress +609, 256);
+        do Memory.poke(memAddress +641, 511);
+        // column 2
+        do Memory.poke(memAddress +98, 12);
+        do Memory.poke(memAddress +130, 15);
+        do Memory.poke(memAddress +162, 15);
+        do Memory.poke(memAddress +194, 12);
+        return;
+    }
+
+
+    //the player won the game
+    method void victory(int finalScore) {
+        var int textY;
+        let textY = 12;
+        let animationCounter = 0;
+    
+        while(~exit) {
+            //fireworks
+            if(animationCounter = 0) {
+                do Screen.clearScreen();
+                do Output.moveCursor(10, 27);
+                do Output.printString("Victory!");
+                do Output.moveCursor(textY, 27);
+                do Output.printString("Final Score: ");
+                do Output.printInt(finalScore);
+
+                let firework1Size = 1;
+                let firework2Size = 5;
+                let firework3Size = 10;
+                let expanding1 = true;
+                let expanding2 = true;
+                let expanding3 = true;
+                
+                let firework1X = Random.between(50, 200);
+                let firework1Y = Random.between(50, 100);
+                let firework2X = Random.between(300, 450);
+                let firework2Y = Random.between(50, 100);
+                let firework3X = Random.between(200, 300);
+                let firework3Y = Random.between(150, 200);
+            }
+
+            do updateFirework(1);
+            do updateFirework(2);
+            do updateFirework(3);
+            
+            if ((animationCounter & 15) = 0) {
+                do resetFireworkPositions();
+            }
+
+            do Sys.wait(50);
+            let animationCounter = animationCounter + 1;
+            if(animationCounter > 200) { let animationCounter = 0; }
+        }
+        return;
+    }
+
+
+    //changes the zise and position of the fireworks
+    method void updateFirework(int which) {
+        var int x, y, size;
+        var boolean expanding;
+        
+        if (which = 1) { 
+            let x = firework1X;
+            let y = firework1Y;
+            let size = firework1Size;
+            let expanding = expanding1;
+        }
+        if (which = 2) {
+            let x = firework2X;
+            let y = firework2Y;
+            let size = firework2Size;
+            let expanding = expanding2;
+        }
+        if (which = 3) {
+            let x = firework3X;
+            let y = firework3Y;
+            let size = firework3Size;
+            let expanding = expanding3;
+        }
+
+        do Screen.setColor(false);
+        do drawFirework(x, y, size);
+        
+        if (expanding) {
+            if (size < 20) { let size = size + 1; }
+            else { let expanding = false; }
+        } else {
+            if (size > 1) { let size = size - 1; }
+            else { let expanding = true; }
+        }
+
+        do Screen.setColor(true);
+        do drawFirework(x, y, size);
+
+        if (which = 1) {
+            let firework1Size = size;
+            let expanding1 = expanding;
+        }
+        if (which = 2) {
+            let firework2Size = size;
+            let expanding2 = expanding;
+        }
+        if (which = 3) {
+            let firework3Size = size;
+            let expanding3 = expanding;
+        }
+        return;
+    }
+
+    method void resetFireworkPositions() {
+        let firework1X = Random.between(50, 200);
+        let firework1Y = Random.between(50, 100);
+        let firework2X = Random.between(300, 450);
+        let firework2Y = Random.between(50, 100);
+        let firework3X = Random.between(200, 300);
+        let firework3Y = Random.between(150, 200);
+        return;
+    }
+
+    method void drawFirework(int centerX, int centerY, int size) {
+        do Screen.drawLine(centerX, centerY, centerX, centerY - size);//Up
+        do Screen.drawLine(centerX, centerY, centerX, centerY + size);//Down
+        do Screen.drawLine(centerX, centerY, centerX - size, centerY);//Left 
+        do Screen.drawLine(centerX, centerY, centerX + size, centerY);//Right
+        do Screen.drawLine(centerX, centerY, centerX - size, centerY - size);//Diagonal up-left
+        do Screen.drawLine(centerX, centerY, centerX + size, centerY - size);//Diagonal up-right
+        do Screen.drawLine(centerX, centerY, centerX - size, centerY + size);//Diagonal down-left
+        do Screen.drawLine(centerX, centerY, centerX + size, centerY + size);//Diagonal down-right
+        return;
+    }
+}

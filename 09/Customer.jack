@@ -1,0 +1,135 @@
+// Customer character that places orders 
+class Customer {
+     // Screen coordinates
+    field int x, y;
+    // Character size       
+    field int size;
+    // Current order text       
+    field String order;   
+    
+    //Creates new customer at the given coordinates
+    constructor Customer new(int startX, int startY) {
+        var String welcomeMsg;
+        let x = startX;
+        let y = startY;
+        let size = 20;
+        let order = String.new(0);
+        return this;
+    }
+
+    //Frees the allocated memory 
+    method void dispose() {
+        if (~(order = null)) {
+            do order.dispose();
+        }
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    //Draws the customer character and order
+    method void draw() {
+        // Draw stick figure
+        do Screen.drawLine(x-5, y+size, x+5, y+size);      
+        do Screen.drawLine(x, y, x, y+size);               
+        do Screen.drawLine(x-10, y+(size/2), x+10, y+(size/2));  
+        do Screen.drawCircle(x, y-5, 5);                  
+        
+        //Draw the speech bubble with order
+        do Output.moveCursor(3,27);
+        do Output.printString(order);
+        return;
+    }
+
+
+    //set the ccustomer's food order 
+    method void setOrder(int orderType) {
+        var String newOrder; 
+        //Dispose old order if exists
+        if(~(order = null)) {
+            do order.dispose();
+        } 
+        // Create new order string
+        let newOrder = String.new(20);
+        if(orderType = 0) {
+            //I want Hamburger!
+            do newOrder.appendChar(73);  
+            do newOrder.appendChar(32); 
+            do newOrder.appendChar(119); 
+            do newOrder.appendChar(97); 
+            do newOrder.appendChar(110); 
+            do newOrder.appendChar(116);
+            do newOrder.appendChar(32);
+            do newOrder.appendChar(97);
+            do newOrder.appendChar(32); 
+            do newOrder.appendChar(72); 
+            do newOrder.appendChar(97); 
+            do newOrder.appendChar(109);
+            do newOrder.appendChar(98); 
+            do newOrder.appendChar(117); 
+            do newOrder.appendChar(114); 
+            do newOrder.appendChar(103); 
+            do newOrder.appendChar(101); 
+            do newOrder.appendChar(114); 
+            do newOrder.appendChar(33); 
+        }
+        if(orderType = 1) { 
+            //I want Falafel!
+            do newOrder.appendChar(73); 
+            do newOrder.appendChar(32); 
+            do newOrder.appendChar(119); 
+            do newOrder.appendChar(97); 
+            do newOrder.appendChar(110); 
+            do newOrder.appendChar(116); 
+            do newOrder.appendChar(32); 
+            do newOrder.appendChar(97); 
+            do newOrder.appendChar(32);
+            do newOrder.appendChar(70); 
+            do newOrder.appendChar(97); 
+            do newOrder.appendChar(108);
+            do newOrder.appendChar(97); 
+            do newOrder.appendChar(102); 
+            do newOrder.appendChar(101); 
+            do newOrder.appendChar(108); 
+            do newOrder.appendChar(33); 
+        }
+        if(orderType = 2) { 
+            //I want Shawarma!
+            do newOrder.appendChar(73); 
+            do newOrder.appendChar(32); 
+            do newOrder.appendChar(119);
+            do newOrder.appendChar(97); 
+            do newOrder.appendChar(110);
+            do newOrder.appendChar(116); 
+            do newOrder.appendChar(32); 
+            do newOrder.appendChar(97); 
+            do newOrder.appendChar(32);
+            do newOrder.appendChar(83);
+            do newOrder.appendChar(104);
+            do newOrder.appendChar(97); 
+            do newOrder.appendChar(119); 
+            do newOrder.appendChar(97); 
+            do newOrder.appendChar(114); 
+            do newOrder.appendChar(109); 
+            do newOrder.appendChar(97);
+            do newOrder.appendChar(33); 
+        }
+        
+
+        let order = newOrder;
+        
+        do Screen.setColor(false);
+        do draw();
+        do Screen.setColor(true);
+        do draw();
+        
+        return;
+    }
+
+    method void cleanup() {
+        if (~(order = null)) {
+            do order.dispose();
+            let order = null;
+        }
+        return;
+    }
+}

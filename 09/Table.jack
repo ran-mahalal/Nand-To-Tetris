@@ -1,0 +1,35 @@
+//Food table
+class Table {
+    field int x, y;      
+    field int width;     
+    field int height;
+    
+    
+    constructor Table new() {
+        let x = 43;
+        let y = 150;
+        let width = 425; 
+        let height = 20; 
+        return this;
+    }
+
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    // Draws the table
+    method void draw() {
+        //Draw table base
+        do Screen.drawRectangle(x, y, x + width, y + height); 
+        
+        //Draw food labels
+        do Output.moveCursor(13,7);
+        do Output.printString("Hamburger");
+        do Output.moveCursor(13,27);
+        do Output.printString("Falafel");
+        do Output.moveCursor(13,47);
+        do Output.printString("Shawarma");
+        return;
+    }
+}
